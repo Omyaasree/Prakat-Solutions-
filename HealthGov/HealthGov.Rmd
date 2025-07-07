@@ -1,0 +1,357 @@
+---
+title: "HealthGov"
+author: "Omyaasree Balaji"
+date: "2025-07-03"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+
+```{r}
+# Load libraries
+library(readxl)
+library(ggplot2)
+
+# Read only column D from Excel
+gender_data <- read_excel(
+  "C:/Users/ojasb/OneDrive/Desktop/Prakat/HealthgGov/synthea_output.xlsx",
+  col_names = TRUE,
+  range = cell_cols("D")
+)
+
+# Clean whitespace
+gender_data[] <- lapply(gender_data, function(x) if (is.character(x)) trimws(x) else x)
+
+# Count male/female directly
+gender_counts <- as.data.frame(table(gender_data[[1]]))
+colnames(gender_counts) <- c("Gender", "Count")
+
+# Print to check
+print(gender_counts)
+
+# Plot
+ggplot(gender_counts, aes(x = Gender, y = Count, fill = Gender)) +
+  geom_bar(stat = "identity", width = 0.6) +
+  geom_text(aes(label = Count), vjust = -0.5, size = 5) +
+  scale_fill_manual(values = c("female" = "pink", "male" = "lightblue")) +
+  labs(
+    title = "Gender Distribution",
+    x = "Gender",
+    y = "Count"
+  ) +
+  coord_cartesian(ylim = c(0, max(gender_counts$Count) * 1.1)) +  # safer than ylim()
+  theme_minimal()
+
+              
+```
+
+```{r}
+# Load libraries
+library(readxl)
+library(dplyr)
+library(ggplot2)
+
+# Read Gender and Ethnicity
+data <- read_excel(
+  "C:/Users/ojasb/OneDrive/Desktop/Prakat/HealthgGov/synthea_output.xlsx",
+  col_names = TRUE,
+  range = cell_cols(c("D", "G"))   # Replace with your actual Ethnicity column
+)
+
+# Clean whitespace
+data[] <- lapply(data, function(x) if (is.character(x)) trimws(x) else x)
+
+print(names(data))
+
+# Filter and count
+ethnicity_counts <- data %>%
+  filter(Ethnicity == "Hispanic or Latino") %>%
+  group_by(Gender) %>%
+  summarise(Count = n()) %>%
+  ungroup()
+
+print(ethnicity_counts)
+
+# Plot
+ggplot(ethnicity_counts, aes(x = Gender, y = Count, fill = Gender)) +
+  geom_bar(stat = "identity", width = 0.6) +
+  geom_text(aes(label = Count), vjust = -0.5, size = 5) +
+  scale_fill_manual(values = c("female" = "pink", "male" = "lightblue")) +
+  labs(
+    title = "Hispanic or Latino by Gender",
+    x = "Gender",
+    y = "Count"
+  ) +
+  coord_cartesian(ylim = c(0, max(ethnicity_counts$Count) * 1.1)) +
+  theme_minimal()
+```
+
+
+```{r}
+# Load libraries
+library(readxl)
+library(ggplot2)
+
+# Read Marital Status column (F)
+marital_data <- read_excel(
+  "C:/Users/ojasb/OneDrive/Desktop/Prakat/HealthgGov/synthea_output.xlsx",
+  col_names = TRUE,
+  range = cell_cols("F")
+)
+
+# Clean whitespace
+marital_data[] <- lapply(marital_data, function(x) if (is.character(x)) trimws(x) else x)
+
+# Count Marital Status
+marital_counts <- as.data.frame(table(marital_data[[1]]))
+colnames(marital_counts) <- c("MaritalStatus", "Count")
+
+print(marital_counts)
+
+# Plot
+ggplot(marital_counts, aes(x = MaritalStatus, y = Count, fill = MaritalStatus)) +
+  geom_bar(stat = "identity", width = 0.5) +
+  geom_text(aes(label = Count), vjust = -0.5, size = 5) +
+  scale_fill_manual(values = c(
+    "Married" = "green",
+    "Never Married" = "blue",
+    "Widowed" = "yellow",
+    "Divorced" = "red"
+  )) +
+  labs(
+    title = "Marital Status",
+    x = "Marital Status",
+    y = "Count"
+  ) +
+  theme_minimal()
+
+```
+
+
+```{r}
+## Load libraries
+library(readxl)
+library(dplyr)
+library(stringr)
+
+# Read the Excel file
+data <- read_excel("C:/Users/ojasb/OneDrive/Desktop/Prakat/HealthgGov/synthea_output.xlsx",
+                   col_names = TRUE)
+
+# 1️⃣ Trim whitespace for all character columns
+data[] <- lapply(data, function(x) if (is.character(x)) str_trim(x) else x)
+
+# 2️⃣ Standardize Gender
+data$Gender <- str_to_title(data$Gender)
+# e.g., 'male', 'MALE' -> 'Male'
+data$Gender[data$Gender %in% c("M", "m")] <- "Male"
+data$Gender[data$Gender %in% c("F", "f")] <- "Female"
+
+# 3️⃣ Standardize MaritalStatus (title case)
+data$MaritalStatus <- str_to_title(data$MaritalStatus)
+
+# 4️⃣ Calculate Age (from BirthDate)
+data$BirthDate <- as.Date(data$BirthDate)
+data$Age <- as.numeric(format(Sys.Date(), "%Y")) - as.numeric(format(data$BirthDate, "%Y"))
+
+# 5️⃣ Group Age
+below_25 <- sum(data$Age < 26, na.rm = TRUE)
+between_26_50 <- sum(data$Age >= 26 & data$Age <= 50, na.rm = TRUE)
+above_50 <- sum(data$Age > 50, na.rm = TRUE)
+
+# 6️⃣ Count Gender
+male <- sum(data$Gender == "Male", na.rm = TRUE)
+female <- sum(data$Gender == "Female", na.rm = TRUE)
+
+# 7️⃣ Summarize DisabilityAdjustedLifeYears
+dalys_low <- sum(data$DisabilityAdjustedLifeYears < 5, na.rm = TRUE)
+dalys_mid <- sum(data$DisabilityAdjustedLifeYears >= 5 & data$DisabilityAdjustedLifeYears < 10, na.rm = TRUE)
+dalys_high <- sum(data$DisabilityAdjustedLifeYears >= 10, na.rm = TRUE)
+
+# 8️⃣ Summarize QualityAdjustedLifeYears
+qalys_low <- sum(data$QualityAdjustedLifeYears < 5, na.rm = TRUE)
+qalys_mid <- sum(data$QualityAdjustedLifeYears >= 5 & data$QualityAdjustedLifeYears < 10, na.rm = TRUE)
+qalys_high <- sum(data$QualityAdjustedLifeYears >= 10, na.rm = TRUE)
+
+# 9️⃣ Total Conditions & Medications
+total_conditions <- sum(data$ConditionCount, na.rm = TRUE)
+total_medications <- sum(data$MedicationCount, na.rm = TRUE)
+
+# 🔟 Print summary
+cat("Gender Counts:\n")
+cat("Male:", male, "\n")
+cat("Female:", female, "\n\n")
+
+cat("Age Groups:\n")
+cat("Below 25:", below_25, "\n")
+cat("26-50:", between_26_50, "\n")
+cat("Above 05:", above_50, "\n\n")
+
+cat("DisabilityAdjustedLifeYears:\n")
+cat("<5:", dalys_low, "\n")
+cat("5-10:", dalys_mid, "\n")
+cat(">10:", dalys_high, "\n\n")
+
+cat("QualityAdjustedLifeYears:\n")
+cat("<5:", qalys_low, "\n")
+cat("5-10:", qalys_mid, "\n")
+cat(">10:", qalys_high, "\n\n")
+
+cat("Total Conditions:", total_conditions, "\n")
+cat("Total Medications:", total_medications, "\n")
+
+```
+
+
+```{r}
+
+# Load libraries
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(stringr)
+
+# Read your data
+data <- read_excel("C:/Users/ojasb/OneDrive/Desktop/Prakat/HealthgGov/synthea_output.xlsx",
+                   col_names = TRUE)
+
+# Clean up
+data[] <- lapply(data, function(x) if (is.character(x)) str_trim(x) else x)
+data$MaritalStatus <- str_to_title(data$MaritalStatus)
+data$DisabilityAdjustedLifeYears <- as.numeric(data$DisabilityAdjustedLifeYears)
+
+# Create a new column: Above5
+data$DALYs_Group <- ifelse(data$DisabilityAdjustedLifeYears > 5, "Above 5", "5 or Below")
+
+# Filter for the marital statuses you want
+status_list <- c("Divorced", "Married", "Never Married", "Widowed")
+
+# Loop through each status and plot pie chart
+for (status in status_list) {
+  
+  pie_data <- data %>%
+    filter(MaritalStatus == status) %>%
+    group_by(DALYs_Group) %>%
+    summarise(Count = n())
+  
+  # Make sure percentages add up
+  pie_data$Fraction <- pie_data$Count / sum(pie_data$Count)
+  
+  # Plot pie chart
+  p <- ggplot(pie_data, aes(x = "", y = Fraction, fill = DALYs_Group)) +
+    geom_bar(stat = "identity", width = 1, color = "white") +
+    coord_polar(theta = "y") +
+    labs(
+      title = paste("DALYs Above 5 vs 5 or Below -", status),
+      fill = "DALYs Group"
+    ) +
+    geom_text(aes(label = scales::percent(Fraction)),
+              position = position_stack(vjust = 0.5)) +
+    theme_void()
+  
+  print(p)
+}
+```
+
+```{r}
+
+# Load libraries
+# Load libraries
+library(readxl)
+library(dplyr)
+library(ggplot2)
+library(stringr)
+
+# Read data
+data <- read_excel("C:/Users/ojasb/OneDrive/Desktop/Prakat/HealthgGov/synthea_output.xlsx",
+                   col_names = TRUE)
+
+# Clean whitespace & convert DALYs
+data[] <- lapply(data, function(x) if (is.character(x)) str_trim(x) else x)
+data$DisabilityAdjustedLifeYears <- as.numeric(data$DisabilityAdjustedLifeYears)
+
+# Create DALYs group
+data$DALYs_Group <- ifelse(
+  data$DisabilityAdjustedLifeYears >= 0 & data$DisabilityAdjustedLifeYears <= 1,
+  "0–1",
+  "Other"
+)
+
+# Summarize counts
+dalys_counts <- data %>%
+  group_by(DALYs_Group) %>%
+  summarise(Count = n())
+
+# Add the new "4× Others" bar
+other_count <- dalys_counts$Count[dalys_counts$DALYs_Group == "Other"]
+
+dalys_counts <- rbind(
+  dalys_counts,
+  data.frame(DALYs_Group = "Ideal", Count = 4 * other_count)
+)
+
+print(dalys_counts)
+
+# Plot
+ggplot(dalys_counts, aes(x = DALYs_Group, y = Count, fill = DALYs_Group)) +
+  geom_bar(stat = "identity", width = 0.5) +
+  labs(
+    title = "DALYs 0–1 vs Others and Ideal",
+    x = "Group",
+    y = "Count"
+  ) +
+  geom_text(aes(label = Count), vjust = -0.5) +
+  theme_minimal() +
+  theme(legend.position = "none")
+
+
+```
+
+
+```{r}
+# Load libraries
+library(readxl)
+library(ggplot2)
+library(dplyr)
+library(stringr)
+
+# Read data
+data <- read_excel("C:/Users/ojasb/OneDrive/Desktop/Prakat/HealthgGov/synthea_output.xlsx")
+
+# Clean
+data[] <- lapply(data, function(x) if (is.character(x)) str_trim(x) else x)
+data$ConditionCount <- as.numeric(data$ConditionCount)
+data$DisabilityAdjustedLifeYears <- as.numeric(data$DisabilityAdjustedLifeYears)
+
+# Scatter plot
+ggplot(data, aes(x = ConditionCount, y = DisabilityAdjustedLifeYears)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "loess") +
+    geom_abline(intercept = 0, slope = 0.1, color = "red", linetype = "dashed", size = 1) +
+  labs(
+    title = "Condition Count vs. Disability Adjusted Life Years",
+    x = "Number of Conditions",
+    y = "DALYs"
+  ) +
+  theme_minimal()
+
+
+# Make sure numeric
+data$MedicationCount <- as.numeric(data$MedicationCount)
+
+# Scatter plot
+ggplot(data, aes(x = ConditionCount, y = MedicationCount)) +
+  geom_point(alpha = 0.5) +
+  geom_smooth(method = "loess") +
+  labs(
+    title = "Condition Count vs. Medication Count",
+    x = "Number of Conditions",
+    y = "Number of Medications"
+  ) +
+  theme_minimal()
+
+
+
+
+```
