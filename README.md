@@ -1,2 +1,2 @@
-# Prakat-Solutions-
+# Prakat-Solutions
 Internship 2025
