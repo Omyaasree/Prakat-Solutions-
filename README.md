@@ -1,5 +1,5 @@
 # Prakat-Solutions
-Internship 2025
+Project 2025
 
 # 🏥 HealthGov Synthetic Health Data Generator & Analysis
 
